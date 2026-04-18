@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ford-Johnson Merge-Insert Sort Simulator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #efefeb;
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #888780;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: system-ui, -apple-system, sans-serif;
+    --mono: 'Menlo', 'Consolas', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg2: #2a2a28;
+      --bg3: #323230;
+      --text: #f0ede8;
+      --text2: #a8a69f;
+      --text3: #6e6c66;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.20);
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 20px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 14px;
+  }
+  .input-group {
+    flex: 1;
+    min-width: 200px;
+  }
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  input[type="text"] {
+    width: 100%;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  input[type="text"]:focus {
+    border-color: #378ADD;
+    box-shadow: 0 0 0 2px rgba(55,138,221,0.15);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  button {
+    cursor: pointer;
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--bg2); }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+  .btn-primary {
+    background: #E6F1FB;
+    color: #0C447C;
+    border-color: #378ADD;
+  }
+  .btn-primary:hover { opacity: 0.85; background: #E6F1FB; }
+
+  #counter {
+    font-size: 12px;
+    color: var(--text2);
+    margin-left: 6px;
+  }
+
+  .card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .card-label {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+
+  /* phase pill */
+  .phase-pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .step-title { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .step-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* chips */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-height: 52px;
+  }
+  .chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 44px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 6px;
+    transition: all 0.2s;
+  }
+  .chip .sub {
+    font-size: 9px;
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .c-n  { background:#F1EFE8; color:#444441; border-color:#B4B2A9; }
+  .c-w  { background:#FAEEDA; color:#633806; border-color:#EF9F27; }
+  .c-l  { background:#E1F5EE; color:#085041; border-color:#1D9E75; }
+  .c-ch { background:#E6F1FB; color:#0C447C; border-color:#378ADD; }
+  .c-ins{ background:#FBEAF0; color:#72243E; border-color:#D4537E; }
+  .c-cmp{ background:#FCEBEB; color:#791F1F; border-color:#E24B4A; transform:scale(1.1); }
+  .c-mid{ background:#EEEDFE; color:#3C3489; border-color:#7F77DD; transform:scale(1.08); }
+  .c-done{background:#EAF3DE; color:#27500A; border-color:#639922; }
+
+  @media (prefers-color-scheme: dark) {
+    .c-n  { background:#2e2d28; color:#c8c6be; border-color:#5f5e5a; }
+    .c-w  { background:#3d2e10; color:#FAC775; border-color:#BA7517; }
+    .c-l  { background:#0d2e1e; color:#5DCAA5; border-color:#0F6E56; }
+    .c-ch { background:#0d2340; color:#85B7EB; border-color:#185FA5; }
+    .c-ins{ background:#2e1020; color:#ED93B1; border-color:#993556; }
+    .c-cmp{ background:#2e0d0d; color:#F09595; border-color:#A32D2D; transform:scale(1.1); }
+    .c-mid{ background:#1e1b3e; color:#AFA9EC; border-color:#534AB7; transform:scale(1.08); }
+    .c-done{background:#0f2008; color:#97C459; border-color:#3B6D11; }
+  }
+
+  /* pairs layout */
+  .pairs-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    min-height: 52px;
+  }
+  .pair-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .pair-arrow {
+    font-size: 9px;
+    color: var(--text3);
+  }
+
+  /* jacobsthal */
+  .jac-seq {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 12px;
+  }
+  .jac-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 26px;
+    border-radius: 5px;
+    font-weight: 500;
+    font-size: 12px;
+    padding: 0 5px;
+  }
+  .jac-active  { background:#FBEAF0; color:#72243E; border:1.5px solid #D4537E; }
+  .jac-done    { background:#EAF3DE; color:#27500A; border:1.5px solid #639922; }
+  .jac-pending { background:#F1EFE8; color:#5F5E5A; border:1.5px solid #B4B2A9; }
+
+  @media (prefers-color-scheme: dark) {
+    .jac-active  { background:#2e1020; color:#ED93B1; border-color:#993556; }
+    .jac-done    { background:#0f2008; color:#97C459; border-color:#3B6D11; }
+    .jac-pending { background:#2e2d28; color:#a8a69f; border-color:#5f5e5a; }
+  }
+
+  /* binary search slots */
+  .bs-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .bs-slot {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1.5px solid transparent;
+    padding: 0 4px;
+  }
+  .bs-slot .idx { font-size: 9px; color: var(--text2); margin-top: 1px; }
+  .bs-range{ background:#E6F1FB; color:#0C447C; border-color:#85B7EB; }
+  .bs-out  { background:#F1EFE8; color:#888780; border-color:#D3D1C7; opacity:0.4; }
+  .bs-mid  { background:#EEEDFE; color:#3C3489; border-color:#7F77DD; }
+  .bs-found{ background:#EAF3DE; color:#27500A; border-color:#639922; }
+  .bs-info { font-size:11px; color:var(--text2); margin-top:6px; }
+
+  @media (prefers-color-scheme: dark) {
+    .bs-range{ background:#0d2340; color:#85B7EB; border-color:#185FA5; }
+    .bs-out  { background:#2e2d28; color:#6e6c66; border-color:#444441; opacity:0.4; }
+    .bs-mid  { background:#1e1b3e; color:#AFA9EC; border-color:#534AB7; }
+    .bs-found{ background:#0f2008; color:#97C459; border-color:#3B6D11; }
+  }
+
+  /* explain box */
+  .explain-box {
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    border-left: 3px solid #378ADD;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .explain-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .explain-body  { font-size: 12px; color: var(--text2); line-height: 1.65; white-space: pre-wrap; }
+  .explain-math  {
+    font-family: var(--mono);
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    margin-top: 6px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.6;
+  }
+
+  /* stats */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    min-width: 90px;
+  }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .stat-val   { font-size: 20px; font-weight: 500; }
+
+  /* legend */
+  .legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--text2);
+    align-items: center;
+    margin-top: 14px;
+  }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .leg-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+  }
+
+  .hidden { display: none !important; }
+
+  /* source code section */
+  .source-section {
+    margin-top: 32px;
+    border-top: 0.5px solid var(--border);
+    padding-top: 20px;
+  }
+  .source-section h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Ford-Johnson Merge-Insert Sort Simulator</h1>
+<p class="subtitle">Based on Knuth, "The Art of Computer Programming" Vol. 3, Section 5.3.1, p.184</p>
+
+<div class="controls">
+  <div class="input-group">
+    <label>Numbers (space-separated, 4–9 unique positive integers)</label>
+    <input type="text" id="inp" placeholder="e.g. 5 3 8 1 7 2">
+  </div>
+  <button class="btn-primary" onclick="go()">start</button>
+  <button onclick="rnd()">random</button>
+</div>
+
+<div class="btn-row">
+  <button id="bPrev" onclick="prev()" disabled>prev</button>
+  <button class="btn-primary" id="bNext" onclick="nxt()" disabled>next</button>
+  <button id="bAll" onclick="all()" disabled>run all</button>
+  <button id="bReset" onclick="rst()" disabled>reset</button>
+  <span id="counter">—</span>
+</div>
+
+<!-- Step header -->
+<div class="card hidden" id="stepCard">
+  <div id="phasePill" class="phase-pill"></div>
+  <div id="sTitle" class="step-title"></div>
+  <div id="sSub" class="step-sub"></div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row hidden" id="statsRow">
+  <div class="stat-card">
+    <div class="stat-label">comparisons used</div>
+    <div class="stat-val" id="cUsed">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">theoretical min &#x2308;lg n!&#x2309;</div>
+    <div class="stat-val" id="cMin">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">n</div>
+    <div class="stat-val" id="cN">—</div>
+  </div>
+</div>
+
+<!-- Array -->
+<div class="card hidden" id="arrCard">
+  <div class="card-label">array</div>
+  <div class="row" id="arrRow"></div>
+</div>
+
+<!-- Pairs -->
+<div class="card hidden" id="pairCard">
+  <div class="card-label">pairs — winner (top) / loser (bottom)</div>
+  <div class="pairs-row" id="pairRow"></div>
+</div>
+
+<!-- Chain -->
+<div class="card hidden" id="chainCard">
+  <div class="card-label">main chain</div>
+  <div class="row" id="chainRow"></div>
+</div>
+
+<!-- Jacobsthal order -->
+<div class="card hidden" id="jacCard">
+  <div class="card-label">jacobsthal insertion order (which loser index goes in next)</div>
+  <div class="jac-seq" id="jacSeq"></div>
+</div>
+
+<!-- Binary search -->
+<div class="card hidden" id="bsCard">
+  <div class="card-label" id="bsLabel">binary search</div>
+  <div id="bsContent"></div>
+</div>
+
+<!-- Explain -->
+<div class="card hidden" id="explainCard">
+  <div class="explain-box">
+    <div class="explain-title" id="exTitle"></div>
+    <div class="explain-body" id="exBody"></div>
+    <div class="explain-math hidden" id="exMath"></div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend hidden" id="legRow">
+  <span><span class="leg-dot" style="background:#FAEEDA;border-color:#EF9F27"></span> winner</span>
+  <span><span class="leg-dot" style="background:#E1F5EE;border-color:#1D9E75"></span> loser</span>
+  <span><span class="leg-dot" style="background:#E6F1FB;border-color:#378ADD"></span> in chain</span>
+  <span><span class="leg-dot" style="background:#FBEAF0;border-color:#D4537E"></span> being inserted</span>
+  <span><span class="leg-dot" style="background:#FCEBEB;border-color:#E24B4A"></span> being compared</span>
+  <span><span class="leg-dot" style="background:#EEEDFE;border-color:#7F77DD"></span> midpoint</span>
+  <span><span class="leg-dot" style="background:#EAF3DE;border-color:#639922"></span> sorted / done</span>
+</div>
+
+<script>
+/* ================================================================
+   Ford-Johnson (Merge-Insert Sort) Simulator
+   Reference: Knuth TAOCP Vol.3, Section 5.3.1, Page 184
+   ================================================================ */
+
+let STEPS = [];   // all generated steps
+let CUR   = -1;  // current step index
+
+/* ----------------------------------------------------------------
+   Math helpers
+   ---------------------------------------------------------------- */
+function lgFact(n) {
+  // ceil( log2(n!) )  — information-theoretic lower bound
+  let s = 0;
+  for (let i = 2; i <= n; i++) s += Math.log2(i);
+  return Math.ceil(s);
+}
+
+/* ----------------------------------------------------------------
+   Jacobsthal sequence and insertion order
+   Formula: t_k = (2^(k+1) + (-1)^k) / 3
+   t0=1, t1=3, t2=5, t3=11, t4=21, t5=43, ...
+   Insertion order: a3,a2 | a5,a4 | a11..a6 | ...
+   (within each group, insert right-to-left)
+   ---------------------------------------------------------------- */
+function jacOrder(numLosers) {
+  if (numLosers <= 1) return [];
+  // build jacobsthal sequence up to numLosers
+  const seq = [1, 3];
+  while (true) {
+    const nx = seq[seq.length-1] + 2 * seq[seq.length-2];
+    if (nx > numLosers + 10) break;
+    seq.push(nx);
+  }
+  const order = [];
+  const used  = new Set([1]);   // a1 is placed for free
+  let prevBound = 1;
+  for (let ji = 1; ji < seq.length; ji++) {
+    const hi = Math.min(seq[ji], numLosers);
+    if (hi <= prevBound) continue;
+    // insert from hi down to prevBound+1
+    for (let i = hi; i > prevBound; i--) {
+      if (i >= 2 && i <= numLosers && !used.has(i)) {
+        order.push(i);
+        used.add(i);
+      }
+    }
+    prevBound = seq[ji];
+    if (prevBound >= numLosers) break;
+  }
+  // any remaining (shouldn't happen but just in case)
+  for (let i = numLosers; i >= 2; i--) {
+    if (!used.has(i)) { order.push(i); used.add(i); }
+  }
+  return order;
+}
+
+/* ----------------------------------------------------------------
+   Binary search sub-steps (for visualization)
+   Returns array of sub-step objects showing lo, hi, mid each round
+   ---------------------------------------------------------------- */
+function binarySearchSteps(val, chain, upperExclusive) {
+  const range = chain.slice(0, upperExclusive);
+  const substeps = [];
+  let lo = 0, hi = range.length;
+  substeps.push({ lo, hi, mid: -1, val, range: range.slice(), phase: 'start' });
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const cmpVal = range[mid];
+    if (cmpVal < val) {
+      substeps.push({
+        lo, hi, mid, val, range: range.slice(), phase: 'go_right',
+        result: `${cmpVal} < ${val}  →  move right (lo = ${mid+1})`
+      });
+      lo = mid + 1;
+    } else {
+      substeps.push({
+        lo, hi, mid, val, range: range.slice(), phase: 'go_left',
+        result: `${cmpVal} >= ${val}  →  move left (hi = ${mid})`
+      });
+      hi = mid;
+    }
+  }
+  substeps.push({
+    lo, hi, mid: -1, val, range: range.slice(),
+    insertAt: lo, phase: 'found',
+    result: `insert at index ${lo}`
+  });
+  return substeps;
+}
+
+/* ----------------------------------------------------------------
+   Main step builder — produces all visualization steps
+   ---------------------------------------------------------------- */
+function buildSteps(nums) {
+  const steps = [];
+  const n = nums.length;
+  const theoryMin = lgFact(n);
+
+  // ── STEP 0: show initial array ──────────────────────────────
+  steps.push({
+    type: 'start', phase: 'step 1: pair',
+    title: `pair up every two elements`,
+    sub: `compare each pair → find winner (bigger) and loser (smaller). uses exactly ⌊${n}/2⌋ = ${Math.floor(n/2)} comparisons`,
+    arr: nums.slice(), pairs: [], chain: [], comps: 0,
+    jacOrder: [], jacDone: [],
+    explain: {
+      title: 'why pair first?',
+      body: 'Each pair comparison costs exactly 1 comparison and gives guaranteed info:\nthe loser is always smaller than its winner.\nWe exploit this later to place a1 for free, and to bound binary search ranges.',
+      math: `pairs needed = ⌊n/2⌋ = ⌊${n}/2⌋ = ${Math.floor(n/2)}`
+    }
+  });
+
+  // ── STEP 1: pairwise comparisons ────────────────────────────
+  const rawPairs = [];
+  let comps = 0;
+
+  for (let i = 0; i < Math.floor(n / 2); i++) {
+    const a = nums[2*i], b = nums[2*i+1];
+    comps++;
+    rawPairs.push({ w: Math.max(a,b), l: Math.min(a,b), ia: 2*i, ib: 2*i+1 });
+    steps.push({
+      type: 'pair', phase: `step 1: pair ${i+1}/${Math.floor(n/2)}`,
+      title: `compare ${a} vs ${b}  →  winner: ${Math.max(a,b)},  loser: ${Math.min(a,b)}`,
+      sub: `comparison #${comps} — winner labeled b${i+1}, loser labeled a${i+1}`,
+      arr: nums.slice(), pairs: rawPairs.slice(), chain: [], comps,
+      jacOrder: [], jacDone: [],
+      highlight: { ia: 2*i, ib: 2*i+1 },
+      explain: {
+        title: 'what is a winner / loser?',
+        body: `We ask: is ${a} > ${b}?\nAnswer: ${a > b ? 'yes' : 'no'}.\n\n→ winner = ${Math.max(a,b)}  (called b${i+1})\n→ loser  = ${Math.min(a,b)}  (called a${i+1})\n\nKey fact stored: a${i+1} < b${i+1} always.`,
+        math: `comparison: ${a} vs ${b}  →  ${Math.max(a,b)} wins\ntotal comparisons so far: ${comps}`
+      }
+    });
+  }
+
+  // leftover element when n is odd
+  const leftover = (n % 2 === 1) ? nums[n-1] : null;
+
+  // ── STEP 2: sort winners recursively ────────────────────────
+  const winners  = rawPairs.map(p => p.w);
+  const losers   = rawPairs.map(p => p.l);
+  const sortedW  = [...winners].sort((a,b) => a - b);
+  const wComps   = lgFact(winners.length);
+  comps += wComps;
+
+  // re-map losers to their sorted winners
+  const sortedPairs  = sortedW.map(w => {
+    const orig = rawPairs.find(p => p.w === w);
+    return { w, l: orig.l };
+  });
+  const sortedLosers = sortedPairs.map(p => p.l);
+
+  steps.push({
+    type: 'sort_winners', phase: 'step 2: sort winners',
+    title: `recursively sort ${winners.length} winners`,
+    sub: `winners before: [${winners.join(', ')}]  →  after: [${sortedW.join(', ')}]\nuses ⌈lg(${winners.length}!)⌉ = ${wComps} comparisons`,
+    arr: nums.slice(), pairs: sortedPairs.slice(), chain: [], comps,
+    jacOrder: [], jacDone: [],
+    explain: {
+      title: 'why sort only the winners?',
+      body: `We have ${winners.length} winners. Sorting them recursively costs only ⌈lg(${winners.length}!)⌉ comparisons.\n\nThe losers are NOT sorted here — they get inserted one-by-one later using binary search with bounded ranges.`,
+      math: `⌈lg(${winners.length}!)⌉ = ${wComps} comparisons\nwinners: [${winners.join(', ')}]\n     → [${sortedW.join(', ')}]`
+    }
+  });
+
+  // ── STEP 3: build main chain with a1 free ───────────────────
+  let chain = [sortedLosers[0], ...sortedW];
+  if (leftover !== null) chain.push(leftover);
+  comps++;  // conceptual increment for chain build
+
+  steps.push({
+    type: 'build_chain', phase: 'step 3: build main chain',
+    title: `place a1 = ${sortedLosers[0]} at front of chain (FREE — 0 comparisons)`,
+    sub: `chain = [a1, b1, b2, ..., b${sortedW.length}] = [${chain.join(', ')}]`,
+    arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+    jacOrder: [], jacDone: [], freeInsert: sortedLosers[0],
+    explain: {
+      title: 'why is a1 free?',
+      body: `From Step 1 we know: a1 < b1.\nAfter Step 2, b1 = ${sortedW[0]} is at the front of the sorted winners.\nSo a1 = ${sortedLosers[0]} MUST go before b1.\nPlacing it costs ZERO comparisons — we already have this info!`,
+      math: `a1 = ${sortedLosers[0]}  <  b1 = ${sortedW[0]}  (known from pairing)\nchain = [a1, b1, b2, ..., b${sortedW.length}]\n      = [${chain.join(', ')}]`
+    }
+  });
+
+  // ── STEP 4: explain Jacobsthal order ────────────────────────
+  const numLosers = sortedLosers.length;
+  const jOrder    = jacOrder(numLosers);
+  const jacSeqDisplay = [1, 3, 5, 11, 21, 43, 85].filter(v => v <= numLosers + 1);
+
+  steps.push({
+    type: 'jac_explain', phase: 'step 4: jacobsthal order',
+    title: `determine insertion order using jacobsthal numbers`,
+    sub: `insert ${numLosers - 1} remaining losers in this order: [${jOrder.join(', ')}]`,
+    arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+    jacOrder: jOrder, jacDone: [],
+    explain: {
+      title: 'why this specific order? (the key insight!)',
+      body: `Naive order (a2, a3, a4, ...) wastes comparisons.\nJacobsthal order guarantees each binary search stays within a BOUNDED range.\n\nFormula:  t_k = (2^(k+1) + (-1)^k) / 3\n\nt1=1, t2=3, t3=5, t4=11, t5=21...\n\nGroup 1: insert a3, a2   (≤ 2 comparisons each)\nGroup 2: insert a5, a4   (≤ 3 comparisons each)\nGroup 3: insert a11..a6  (≤ 4 comparisons each)\n\nInsert right-to-left within each group so that the previously inserted element acts as an upper-bound for the next binary search.`,
+      math: `jacobsthal values: [${jacSeqDisplay.join(', ')}]\ninsertion order: [1 (free), ${jOrder.join(', ')}]`
+    }
+  });
+
+  // ── STEP 5: insert each loser in jacobsthal order ───────────
+  const jacDoneSet = new Set([1]);
+
+  for (let ji = 0; ji < jOrder.length; ji++) {
+    const loserIdx    = jOrder[ji];
+    const val         = sortedLosers[loserIdx - 1];
+    const pairedWin   = sortedW[loserIdx - 1];
+    const upperExcl   = chain.indexOf(pairedWin) + 1;  // search only 0..upperExcl-1
+    const searchRange = chain.slice(0, upperExcl);
+    const bsSteps     = binarySearchSteps(val, chain, upperExcl);
+    const searchComps = bsSteps.length - 2;  // number of actual comparisons
+
+    // show "about to insert" step
+    steps.push({
+      type: 'insert_start', phase: `step 5: insert a${loserIdx}`,
+      title: `insert a${loserIdx} = ${val} into main chain`,
+      sub: `search range: [${searchRange.join(', ')}] (indices 0..${upperExcl-1})\nupper bound = index of b${loserIdx} = ${pairedWin}\nbinary search uses ⌈lg(${upperExcl})⌉ = ${searchComps} comparisons`,
+      arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+      jacOrder: jOrder, jacDone: [...jacDoneSet],
+      insertVal: val, searchRange: searchRange.slice(),
+      upperExcl, pairedWinner: pairedWin, loserIdx,
+      bsSteps, bsStep: 0,
+      explain: {
+        title: `how do we get the search range index? (steps 4 & 5 index logic)`,
+        body: `a${loserIdx} was paired with b${loserIdx} = ${pairedWin} in Step 1.\nWe know: a${loserIdx} < b${loserIdx} (guaranteed from pairing).\n\nb${loserIdx} = ${pairedWin} is currently in the chain at index ${upperExcl-1}.\nSo a${loserIdx} MUST be somewhere in chain[0 .. ${upperExcl-1}].\n\nWe binary-search ONLY that range — everything to the right is irrelevant!`,
+        math: `upper bound index = chain.indexOf(${pairedWin}) = ${upperExcl-1}\nsearch space = [${searchRange.join(', ')}]  (size ${upperExcl})\n⌈lg(${upperExcl})⌉ = ${searchComps} comparisons`
+      }
+    });
+
+    // show each binary search comparison
+    for (let bi = 1; bi < bsSteps.length - 1; bi++) {
+      const bs = bsSteps[bi];
+      comps++;
+      steps.push({
+        type: 'bs_step', phase: `step 5: binary search`,
+        title: `compare ${val} vs chain[${bs.mid}] = ${bs.range[bs.mid]}`,
+        sub: bs.result,
+        arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+        jacOrder: jOrder, jacDone: [...jacDoneSet],
+        insertVal: val, searchRange: searchRange.slice(),
+        upperExcl, pairedWinner: pairedWin, loserIdx,
+        bsSteps, bsStep: bi,
+        lo: bs.lo, hi: bs.hi, mid: bs.mid,
+        explain: {
+          title: 'binary search step — how lo/hi/mid work',
+          body: `Current active range: indices [${bs.lo} .. ${bs.hi-1}]\nMidpoint = ⌊(lo + hi) / 2⌋ = ⌊(${bs.lo} + ${bs.hi}) / 2⌋ = ${bs.mid}\nValue at midpoint: chain[${bs.mid}] = ${bs.range[bs.mid]}\n\n${bs.result}`,
+          math: `lo = ${bs.lo},  hi = ${bs.hi},  mid = ${bs.mid}\nchain[${bs.mid}] = ${bs.range[bs.mid]}\n${bs.result}`
+        }
+      });
+    }
+
+    // place the element
+    const insertAt = bsSteps[bsSteps.length - 1].insertAt;
+    chain.splice(insertAt, 0, val);
+    jacDoneSet.add(loserIdx);
+
+    steps.push({
+      type: 'inserted', phase: `step 5: inserted a${loserIdx}`,
+      title: `${val} inserted at chain index ${insertAt}`,
+      sub: `chain: [${chain.join(', ')}]`,
+      arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+      jacOrder: jOrder, jacDone: [...jacDoneSet],
+      insertVal: val, insertedAt: insertAt, loserIdx,
+      explain: {
+        title: 'insertion done',
+        body: `${val} found its correct position at index ${insertAt}.\nAll elements to its left are smaller.\nAll elements to its right are larger.\n\nNext: insert the next loser in the jacobsthal order.`,
+        math: `chain[${insertAt}] = ${val}\nchain after: [${chain.join(', ')}]`
+      }
+    });
+  }
+
+  // ── DONE ────────────────────────────────────────────────────
+  steps.push({
+    type: 'done', phase: 'complete',
+    title: `sorted in ${comps} comparisons`,
+    sub: `result: [${chain.join(', ')}]   theoretical min ⌈lg(${n}!)⌉ = ${theoryMin}   ${comps <= theoryMin ? 'optimal!' : comps <= theoryMin + 2 ? 'near-optimal' : ''}`,
+    arr: nums.slice(), pairs: sortedPairs.slice(), chain: chain.slice(), comps,
+    jacOrder: jOrder, jacDone: [...jacDoneSet],
+    explain: {
+      title: 'ford-johnson complete',
+      body: `We sorted ${n} elements in ${comps} comparisons.\nTheoretical minimum is ⌈lg(${n}!)⌉ = ${theoryMin}.\n\nFord-Johnson is proven optimal for n = 1..11, 20, 21.\nFor larger n it remains near-optimal.`,
+      math: `comparisons used: ${comps}\ntheoretical minimum: ${theoryMin}\ndifference: ${comps - theoryMin}`
+    }
+  });
+
+  return steps;
+}
+
+/* ================================================================
+   RENDERING
+   ================================================================ */
+
+function phaseStyle(p) {
+  if (p.startsWith('step 1')) return 'background:#FAEEDA;color:#633806';
+  if (p.startsWith('step 2')) return 'background:#E6F1FB;color:#0C447C';
+  if (p.startsWith('step 3')) return 'background:#E1F5EE;color:#085041';
+  if (p.startsWith('step 4')) return 'background:#EEEDFE;color:#3C3489';
+  if (p.startsWith('step 5')) return 'background:#FBEAF0;color:#72243E';
+  if (p === 'complete')       return 'background:#EAF3DE;color:#27500A';
+  return 'background:#F1EFE8;color:#5F5E5A';
+}
+
+function render(s) {
+  // show all cards
+  ['stepCard','arrCard','statsRow','legRow'].forEach(id =>
+    document.getElementById(id).classList.remove('hidden')
+  );
+
+  // phase pill
+  const pill = document.getElementById('phasePill');
+  pill.textContent = s.phase;
+  pill.style.cssText = phaseStyle(s.phase) +
+    ';display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;margin-bottom:6px';
+
+  document.getElementById('sTitle').textContent = s.title;
+  document.getElementById('sSub').textContent   = s.sub || '';
+
+  // ── array row ──────────────────────────────────────────────
+  const arrRow = document.getElementById('arrRow');
+  arrRow.innerHTML = '';
+  s.arr.forEach((v, i) => {
+    let cls = 'c-n';
+    if (s.type === 'done') {
+      cls = 'c-done';
+    } else if (s.highlight && (i === s.highlight.ia || i === s.highlight.ib)) {
+      cls = 'c-cmp';
+    } else if (s.pairs && s.pairs.some(p => p.w === v)) {
+      cls = 'c-w';
+    } else if (s.pairs && s.pairs.some(p => p.l === v)) {
+      cls = 'c-l';
+    }
+    const pidx = s.pairs ? s.pairs.findIndex(p => p.w === v || p.l === v) : -1;
+    const lbl  = pidx >= 0
+      ? (s.pairs[pidx].w === v ? `b${pidx+1}` : `a${pidx+1}`)
+      : '';
+    arrRow.innerHTML += `<div class="chip ${cls}">${v}<span class="sub">${lbl}</span></div>`;
+  });
+
+  // ── pairs row ──────────────────────────────────────────────
+  const pairCard = document.getElementById('pairCard');
+  if (s.pairs && s.pairs.length > 0) {
+    pairCard.classList.remove('hidden');
+    const pairRow = document.getElementById('pairRow');
+    pairRow.innerHTML = '';
+    s.pairs.forEach((p, i) => {
+      const wCls = (s.highlight && s.arr[s.highlight.ib] === p.w) ? 'c-cmp' : 'c-w';
+      const lCls = (s.highlight && s.arr[s.highlight.ia] === p.l) ? 'c-cmp' : 'c-l';
+      pairRow.innerHTML +=
+        `<div class="pair-col">
+           <div class="chip ${wCls}">${p.w}<span class="sub">b${i+1}</span></div>
+           <div class="pair-arrow">></div>
+           <div class="chip ${lCls}">${p.l}<span class="sub">a${i+1}</span></div>
+         </div>`;
+    });
+  } else {
+    pairCard.classList.add('hidden');
+  }
+
+  // ── chain row ──────────────────────────────────────────────
+  const chainCard = document.getElementById('chainCard');
+  if (s.chain && s.chain.length > 0) {
+    chainCard.classList.remove('hidden');
+    const cr = document.getElementById('chainRow');
+    cr.innerHTML = '';
+    s.chain.forEach((v, i) => {
+      let cls = 'c-ch';
+      if (s.type === 'done') {
+        cls = 'c-done';
+      } else if (s.type === 'bs_step' && s.mid !== undefined && i === s.mid && i < s.upperExcl) {
+        cls = 'c-mid';
+      } else if (s.type === 'bs_step' && s.bsSteps) {
+        const bs = s.bsSteps[s.bsStep];
+        if (i >= s.lo && i < s.hi && i < s.upperExcl) cls = 'c-ch';
+        else if (i < s.upperExcl) cls = 'c-n';
+      } else if (s.insertedAt === i && s.type === 'inserted') {
+        cls = 'c-ins';
+      } else if (s.freeInsert === v && i === 0) {
+        cls = 'c-ins';
+      }
+      cr.innerHTML +=
+        `<div class="chip ${cls}">${v}<span class="sub">idx:${i}</span></div>`;
+    });
+  } else {
+    chainCard.classList.add('hidden');
+  }
+
+  // ── jacobsthal order row ───────────────────────────────────
+  const jacCard = document.getElementById('jacCard');
+  if (s.jacOrder && s.jacOrder.length > 0) {
+    jacCard.classList.remove('hidden');
+    const jseq = document.getElementById('jacSeq');
+    jseq.innerHTML =
+      '<span style="font-size:11px;color:var(--text2);margin-right:4px">a1 (free),</span>';
+    s.jacOrder.forEach(idx => {
+      const isDone = s.jacDone && s.jacDone.includes(idx);
+      const isCur  = s.loserIdx === idx &&
+        (s.type === 'insert_start' || s.type === 'bs_step' || s.type === 'inserted');
+      const cls = isCur ? 'jac-active' : isDone ? 'jac-done' : 'jac-pending';
+      jseq.innerHTML += `<div class="jac-box ${cls}">a${idx}</div>`;
+    });
+  } else {
+    jacCard.classList.add('hidden');
+  }
+
+  // ── binary search row ──────────────────────────────────────
+  const bsCard = document.getElementById('bsCard');
+  if ((s.type === 'insert_start' || s.type === 'bs_step' || s.type === 'inserted')
+      && s.searchRange) {
+    bsCard.classList.remove('hidden');
+    document.getElementById('bsLabel').textContent =
+      `binary search — inserting ${s.insertVal} into [${s.searchRange.join(', ')}]`;
+    const cont = document.getElementById('bsContent');
+    let html = '<div class="bs-row">';
+    s.searchRange.forEach((v, i) => {
+      let cls = 'bs-range';
+      if (s.type === 'bs_step' && s.mid !== undefined) {
+        if (i < s.lo || i >= s.hi) cls = 'bs-out';
+        else if (i === s.mid)      cls = 'bs-mid';
+        else                        cls = 'bs-range';
+      }
+      if (s.type === 'inserted' && i === s.insertedAt) cls = 'bs-found';
+      html += `<div class="bs-slot ${cls}">${v}<span class="idx">[${i}]</span></div>`;
+    });
+    html += '</div>';
+    if (s.type === 'bs_step' && s.mid !== undefined) {
+      html += `<div class="bs-info">lo=${s.lo}, hi=${s.hi} → mid = ⌊(${s.lo}+${s.hi})/2⌋ = ${s.mid} → compare ${s.insertVal} vs ${s.searchRange[s.mid]}</div>`;
+    }
+    if (s.type === 'inserted') {
+      html += `<div class="bs-info">found position: index ${s.insertedAt}</div>`;
+    }
+    cont.innerHTML = html;
+  } else {
+    bsCard.classList.add('hidden');
+  }
+
+  // ── explain box ────────────────────────────────────────────
+  const exCard = document.getElementById('explainCard');
+  if (s.explain) {
+    exCard.classList.remove('hidden');
+    document.getElementById('exTitle').textContent = s.explain.title;
+    document.getElementById('exBody').textContent  = s.explain.body;
+    const em = document.getElementById('exMath');
+    if (s.explain.math) {
+      em.classList.remove('hidden');
+      em.textContent = s.explain.math;
+    } else {
+      em.classList.add('hidden');
+    }
+  } else {
+    exCard.classList.add('hidden');
+  }
+
+  // ── stats ──────────────────────────────────────────────────
+  document.getElementById('cUsed').textContent = s.comps;
+
+  // ── nav buttons ────────────────────────────────────────────
+  document.getElementById('bPrev').disabled = CUR <= 0;
+  document.getElementById('bNext').disabled = CUR >= STEPS.length - 1;
+  document.getElementById('counter').textContent =
+    `step ${CUR + 1} of ${STEPS.length}`;
+}
+
+/* ================================================================
+   Controls
+   ================================================================ */
+function go() {
+  const raw  = document.getElementById('inp').value.trim();
+  if (!raw) { rnd(); return; }
+  const nums = [...new Set(raw.split(/\s+/).map(Number).filter(v => v > 0 && !isNaN(v)))];
+  if (nums.length < 4 || nums.length > 9) {
+    alert('Please enter 4–9 unique positive numbers.');
+    return;
+  }
+  start(nums);
+}
+
+function rnd() {
+  const n    = 4 + Math.floor(Math.random() * 4);
+  const pool = [];
+  while (pool.length < n) {
+    const v = 1 + Math.floor(Math.random() * 20);
+    if (!pool.includes(v)) pool.push(v);
+  }
+  document.getElementById('inp').value = pool.join(' ');
+  start(pool);
+}
+
+function start(nums) {
+  STEPS = buildSteps(nums);
+  CUR   = 0;
+  document.getElementById('cMin').textContent = lgFact(nums.length);
+  document.getElementById('cN').textContent   = nums.length;
+  ['bNext','bAll','bReset'].forEach(id =>
+    document.getElementById(id).disabled = false
+  );
+  render(STEPS[0]);
+}
+
+function nxt()  { if (CUR < STEPS.length - 1) { CUR++; render(STEPS[CUR]); } }
+function prev() { if (CUR > 0)                 { CUR--; render(STEPS[CUR]); } }
+function all()  { while (CUR < STEPS.length - 1) { CUR++; render(STEPS[CUR]); } }
+
+function rst() {
+  STEPS = []; CUR = -1;
+  ['stepCard','arrCard','pairCard','chainCard','jacCard','bsCard',
+   'explainCard','statsRow','legRow'].forEach(id =>
+    document.getElementById(id).classList.add('hidden')
+  );
+  ['bPrev','bNext','bAll','bReset'].forEach(id =>
+    document.getElementById(id).disabled = true
+  );
+  document.getElementById('counter').textContent = '—';
+}
+
+// keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') nxt();
+  if (e.key === 'ArrowLeft')  prev();
+});
+</script>
+
+</body>
+</html>
