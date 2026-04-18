@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimum Comparison Sorting Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Sorting Visualizer</h1>
+    <div>
+        <input type="text" id="inputArray" placeholder="Enter comma-separated integers">
+        <button id="generateButton">Generate Random Numbers</button>
+        <button id="startButton">Start</button>
+        <button id="playPauseButton">Play/Pause</button>
+        <button id="nextStepButton">Next Step</button>
+        <button id="resetButton">Reset</button>
+        <input type="range" id="speedSlider" value="500" min="100" max="2000">
+        <p>Current Step: <span id="currentStep">0</span> | Total Comparisons: <span id="totalComparisons">0</span></p>
+    </div>
+    <div id="barContainer"></div>
+    <div id="logPanel"></div>
+    <script src="script.js"></script>
+</body>
+</html>
