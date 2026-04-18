@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimum-Comparison Sorting Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { text-align: center; }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        
+        .counter-box {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #d9534f;
+            background: #ffeeba;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #ffc107;
+        }
+
+        .step {
+            background: white;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .step h3 { margin-top: 0; color: #007bff; }
+        
+        .box {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: white;
+            background-color: #6c757d; /* Default gray */
+        }
+        .winner { background-color: #28a745; } /* Green */
+        .loser { background-color: #dc3545; }  /* Red */
+        .pair-box {
+            display: inline-block;
+            border: 2px dashed #999;
+            padding: 5px;
+            margin: 5px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Ford-Johnson Step-by-Step</h1>
+    <p style="text-align: center;">Enter numbers separated by spaces or commas.</p>
+    
+    <div class="controls">
+        <input type="text" id="numInput" value="5 2 9 1 6" placeholder="e.g., 5 2 9 1 6">
+        <button onclick="runSimulation()">Simulate</button>
+    </div>
+
+    <div id="counterDisplay" class="counter-box" style="display: none;">
+        Total Comparisons: <span id="compCount">0</span>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        let comparisonCount = 0;
+
+        function runSimulation() {
+            const inputVal = document.getElementById('numInput').value;
+            let arr = inputVal.match(/\d+/g);
+            if (!arr) {
+                alert("Please enter some numbers!");
+                return;
+            }
+            arr = arr.map(Number);
+            
+            comparisonCount = 0; // Reset counter
+            document.getElementById('counterDisplay').style.display = "block";
+            updateCounter();
+
+            const output = document.getElementById('output');
+            output.innerHTML = ""; 
+
+            addStep("Step 0: Initial Array", "This is our starting list.", renderArray(arr));
+
+            // Step 1: Pairs
+            let pairs = [];
+            let leftover = null;
+            for (let i = 0; i < arr.length; i += 2) {
+                if (i + 1 < arr.length) {
+                    pairs.push([arr[i], arr[i+1]]);
+                } else {
+                    leftover = arr[i];
+                }
+            }
+            
+            let htmlPairs = pairs.map(p => `<div class="pair-box"><span class="box">${p[0]}</span><span class="box">${p[1]}</span></div>`).join("");
+            if (leftover !== null) htmlPairs += `<div class="pair-box">Leftover: <span class="box">${leftover}</span></div>`;
+            addStep("Step 1: Create Pairs", "Group numbers into pairs. Leave the odd one out if necessary.", htmlPairs);
+
+            // Step 2: Winners and Losers
+            let winners = [];
+            let losers = [];
+            let sortedPairs = pairs.map(p => {
+                comparisonCount++; // 1 comparison per pair
+                updateCounter();
+                
+                let winner = p[0] > p[1] ? p[0] : p[1];
+                let loser = p[0] > p[1] ? p[1] : p[0];
+                winners.push(winner);
+                losers.push({ loser: loser, pairedWith: winner });
+                return `<div class="pair-box"><span class="box winner">${winner} (W)</span><span class="box loser">${loser} (L)</span></div>`;
+            });
+            
+            let htmlSortedPairs = sortedPairs.join("");
+            if (leftover !== null) htmlSortedPairs += `<div class="pair-box">Leftover: <span class="box">${leftover}</span></div>`;
+            addStep("Step 2: Find Winners & Losers", "Compare each pair (1 comparison per pair). The larger is the Winner (Green), smaller is Loser (Red).", htmlSortedPairs);
+
+            // Step 3: Sort Winners (Main Chain)
+            let winnersBeforeSort = [...winners];
+            winners.sort((a, b) => {
+                comparisonCount++; // Track comparisons during the sorting of winners
+                updateCounter();
+                return a - b;
+            });
+            
+            let mainChainHTML = winners.map(w => `<span class="box winner">${w}</span>`).join("");
+            let pendingHTML = losers.map(l => `<span class="box loser">${l.loser}</span>`).join("");
+            if (leftover !== null) pendingHTML += `<span class="box">${leftover}</span>`;
+            
+            addStep("Step 3: Sort Winners (Main Chain)", "Sort the Winners array. These form our Main Chain. Losers become Pending elements.", 
+                `<strong>Main Chain:</strong> ${mainChainHTML}<br><br><strong>Pending (Losers + Leftover):</strong> ${pendingHTML}`);
+
+            if (winners.length === 0) {
+                // If only 1 element was provided
+                let finalArr = leftover !== null ? [leftover] : [];
+                addStep("Finished!", "Array sorted.", renderArray(finalArr));
+                return;
+            }
+
+            // Step 4: Insert First Loser automatically
+            let mainChain = [...winners];
+            let firstLoserObj = losers.find(l => l.pairedWith === winnersBeforeSort[0]);
+            if (firstLoserObj) {
+                let firstLoser = firstLoserObj.loser;
+                mainChain.unshift(firstLoser); 
+                losers = losers.filter(l => l.loser !== firstLoser);
+
+                addStep("Step 4: Insert First Loser", `The loser paired with the smallest winner is automatically placed at the front <b>(0 comparisons)</b>.`, renderArrayClasses(mainChain, firstLoser));
+            }
+
+            // Step 5: Insert remaining using Binary Search
+            let pendingElements = losers.map(l => l.loser);
+            if (leftover !== null) pendingElements.push(leftover);
+
+            pendingElements.forEach((el, index) => {
+                // Perform real binary search to count comparisons accurately
+                let left = 0;
+                let right = mainChain.length - 1;
+                let compsForThisElement = 0;
+
+                while (left <= right) {
+                    comparisonCount++;
+                    compsForThisElement++;
+                    updateCounter();
+                    
+                    let mid = Math.floor((left + right) / 2);
+                    if (mainChain[mid] < el) {
+                        left = mid + 1;
+                    } else {
+                        right = mid - 1;
+                    }
+                }
+                
+                mainChain.splice(left, 0, el);
+                addStep(`Step 5.${index + 1}: Binary Insert ${el}`, `Used Binary Search to find position. <b>(${compsForThisElement} comparisons)</b>`, renderArrayClasses(mainChain, el));
+            });
+
+            addStep("Finished!", `The array is now fully sorted. Total comparisons used: <b>${comparisonCount}</b>.`, renderArray(mainChain));
+        }
+
+        function updateCounter() {
+            document.getElementById('compCount').innerText = comparisonCount;
+        }
+
+        // Helper to draw standard array
+        function renderArray(arr) {
+            return arr.map(num => `<span class="box">${num}</span>`).join("");
+        }
+
+        // Helper to highlight the newly inserted element
+        function renderArrayClasses(arr, highlightNum) {
+            return arr.map(num => {
+                if (num === highlightNum) return `<span class="box" style="background-color: #ffc107; color: black;">${num}</span>`; // Highlight Yellow
+                return `<span class="box winner">${num}</span>`;
+            }).join("");
+        }
+
+        function addStep(title, description, visualHTML) {
+            const output = document.getElementById('output');
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'step';
+            stepDiv.innerHTML = `
+                <h3>${title}</h3>
+                <p><strong>What & Why:</strong> ${description}</p>
+                <div style="margin-top: 10px;">${visualHTML}</div>
+            `;
+            output.appendChild(stepDiv);
+        }
+    </script>
+</body>
+</html>
